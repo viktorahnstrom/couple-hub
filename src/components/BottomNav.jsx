@@ -47,7 +47,7 @@ function MoreIcon({ active }) {
   return (
     <svg width="22" height="22" viewBox="0 0 24 24" fill="none"
       stroke={active ? '#7C3AED' : '#9CA3AF'} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-      <circle cx="5" cy="12" r="1" fill={active ? '#7C3AED' : '#9CA3AF'}/>
+      <circle cx="5"  cy="12" r="1" fill={active ? '#7C3AED' : '#9CA3AF'}/>
       <circle cx="12" cy="12" r="1" fill={active ? '#7C3AED' : '#9CA3AF'}/>
       <circle cx="19" cy="12" r="1" fill={active ? '#7C3AED' : '#9CA3AF'}/>
     </svg>
@@ -55,28 +55,36 @@ function MoreIcon({ active }) {
 }
 
 const tabs = [
-  { to: '/',         label: 'Hem',     Icon: HomeIcon },
+  { to: '/',         label: 'Hem',      Icon: HomeIcon },
   { to: '/calendar', label: 'Kalender', Icon: CalIcon  },
-  { to: '/shopping', label: 'Handel',  Icon: ShopIcon },
-  { to: '/economy',  label: 'Ekonomi', Icon: EconIcon },
-  { to: '/more',     label: 'Mer',     Icon: MoreIcon },
+  { to: '/shopping', label: 'Handel',   Icon: ShopIcon },
+  { to: '/economy',  label: 'Ekonomi',  Icon: EconIcon },
+  { to: '/more',     label: 'Mer',      Icon: MoreIcon },
 ]
 
 export default function BottomNav() {
   return (
-    <nav className="fixed bottom-0 left-0 right-0 max-w-md mx-auto bg-white border-t border-gray-100 safe-bottom z-50">
+    <nav className="fixed bottom-0 left-0 right-0 max-w-md mx-auto bg-white/90 backdrop-blur-md border-t border-gray-100 safe-bottom z-50">
       <div className="flex">
         {tabs.map(({ to, label, Icon }) => (
           <NavLink
             key={to}
             to={to}
             end={to === '/'}
-            className="flex-1 flex flex-col items-center py-2 gap-0.5"
+            className="flex-1 flex flex-col items-center py-2 gap-0.5 relative"
           >
             {({ isActive }) => (
               <>
-                <Icon active={isActive} />
-                <span className={`text-[10px] font-medium transition-colors ${
+                {/* Active pill indicator */}
+                <span
+                  className={`absolute top-0 left-1/2 -translate-x-1/2 h-0.5 rounded-full bg-primary-600 transition-all duration-300 ${
+                    isActive ? 'w-6 opacity-100' : 'w-0 opacity-0'
+                  }`}
+                />
+                <span className={`transition-transform duration-200 ${isActive ? 'scale-110' : 'scale-100'}`}>
+                  <Icon active={isActive} />
+                </span>
+                <span className={`text-[10px] font-semibold transition-colors duration-200 ${
                   isActive ? 'text-primary-600' : 'text-gray-400'
                 }`}>
                   {label}

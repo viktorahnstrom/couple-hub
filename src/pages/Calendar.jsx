@@ -8,6 +8,7 @@ import { sv } from 'date-fns/locale'
 import { supabase } from '../lib/supabase'
 import { useHousehold } from '../contexts/HouseholdContext'
 import { useAuth } from '../contexts/AuthContext'
+import EventModal from '../components/EventModal'
 
 const EVENT_COLORS = [
   '#7C3AED', // purple
@@ -27,6 +28,7 @@ export default function Calendar() {
   const [selectedDay, setSelectedDay] = useState(new Date())
   const [events, setEvents] = useState([])
   const [showAddEvent, setShowAddEvent] = useState(false)
+  const [selectedEvent, setSelectedEvent] = useState(null)
   const [loading, setLoading] = useState(true)
   const [form, setForm] = useState({
     title: '', description: '',
@@ -81,7 +83,7 @@ export default function Calendar() {
   }
 
   async function deleteEvent(id) {
-    if (!confirm('Ta bort händelsen?')) return
+    setSelectedEvent(null)
     await supabase.from('calendar_events').delete().eq('id', id)
     fetchEvents()
   }
@@ -218,7 +220,7 @@ export default function Calendar() {
       {/* Selected day */}
       <div className="px-5 py-4">
         <div className="flex items-center justify-between mb-3">
-          <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider capitalize">
+          <p className="text-xs font-semibold text-gray-400 capitalize tracking-wider">
             {isToday(selectedDay)
               ? 'Idag'
               : format(selectedDay, 'EEEE d MMMM', { locale: sv })}
@@ -239,9 +241,10 @@ export default function Calendar() {
         ) : (
           <div className="space-y-2">
             {selectedDayEvents.map(ev => (
-              <div
+              <button
                 key={ev.id}
-                className="bg-white rounded-2xl border border-gray-100 px-4 py-3 flex items-stretch gap-3"
+                onClick={() => setSelectedEvent(ev)}
+                className="w-full bg-white rounded-2xl shadow-sm px-4 py-3.5 flex items-stretch gap-3 text-left active:scale-[0.98] transition-all"
               >
                 {/* Color bar */}
                 <div
@@ -249,9 +252,9 @@ export default function Calendar() {
                   style={{ background: ev.color }}
                 />
                 <div className="flex-1 min-w-0">
-                  <p className="font-medium text-gray-900 text-sm">{ev.title}</p>
+                  <p className="font-semibold text-gray-900 text-sm">{ev.title}</p>
                   {ev.description && (
-                    <p className="text-xs text-gray-400 mt-0.5">{ev.description}</p>
+                    <p className="text-xs text-gray-400 mt-0.5 truncate">{ev.description}</p>
                   )}
                   {!ev.all_day && (
                     <p className="text-xs text-gray-400 mt-0.5">
@@ -268,31 +271,45 @@ export default function Calendar() {
                     </p>
                   )}
                 </div>
-                <button
-                  onClick={() => deleteEvent(ev.id)}
-                  className="text-gray-200 hover:text-red-400 transition text-lg leading-none self-start"
-                >
-                  ×
-                </button>
-              </div>
+                <svg className="text-gray-200 self-center flex-shrink-0" width="14" height="14"
+                  viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                  <path d="M9 18l6-6-6-6"/>
+                </svg>
+              </button>
             ))}
           </div>
         )}
       </div>
 
+      {/* Event detail modal */}
+      {selectedEvent && (
+        <EventModal
+          event={selectedEvent}
+          onClose={() => setSelectedEvent(null)}
+          onDelete={deleteEvent}
+        />
+      )}
+
       {/* Add Event Modal */}
       {showAddEvent && (
         <div
-          className="fixed inset-0 bg-black/40 flex items-end z-[60]"
+          className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-end z-[60] animate-fadeIn"
           onClick={() => setShowAddEvent(false)}
         >
           <div
-            className="bg-white w-full max-w-md mx-auto rounded-t-2xl p-6 max-h-[90vh] overflow-y-auto"
+            className="bg-white w-full max-w-md mx-auto rounded-t-3xl p-6 max-h-[90vh] overflow-y-auto animate-slideUp"
             onClick={e => e.stopPropagation()}
           >
             <div className="flex items-center justify-between mb-4">
-              <h3 className="font-semibold text-gray-900">Ny händelse</h3>
-              <button onClick={() => setShowAddEvent(false)} className="text-gray-400 text-2xl leading-none">×</button>
+              <h3 className="font-bold text-gray-900">Ny händelse</h3>
+              <button
+                onClick={() => setShowAddEvent(false)}
+                className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center text-gray-400 active:scale-90 transition-all"
+              >
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                  <path d="M18 6L6 18M6 6l12 12"/>
+                </svg>
+              </button>
             </div>
 
             <form onSubmit={addEvent} className="space-y-3">
