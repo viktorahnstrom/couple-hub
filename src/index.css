@@ -1,0 +1,36 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+* {
+  -webkit-tap-highlight-color: transparent;
+}
+
+body {
+  -webkit-font-smoothing: antialiased;
+  overscroll-behavior: none;
+}
+
+/* iOS safe area for bottom nav */
+.safe-bottom {
+  padding-bottom: env(safe-area-inset-bottom);
+}
+
+/* Hide scrollbar but keep scroll */
+.scrollbar-hide::-webkit-scrollbar { display: none; }
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+/* Reusable component classes */
+@layer components {
+  .input {
+    @apply w-full border border-gray-200 rounded-xl px-4 py-3 text-sm outline-none
+           focus:ring-2 focus:ring-primary-500 focus:border-transparent transition;
+  }
+  .btn-primary {
+    @apply w-full bg-primary-600 text-white rounded-xl py-3 text-sm font-medium
+           hover:bg-primary-700 active:scale-95 transition-all;
+  }
+}
