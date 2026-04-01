@@ -45,7 +45,7 @@ export default function Calendar() {
     const end = endOfMonth(currentDate).toISOString()
     const { data } = await supabase
       .from('calendar_events')
-      .select('*')
+      .select('*, creator:profiles!created_by(name)')
       .eq('household_id', household.id)
       .gte('start_time', start)
       .lte('start_time', end)
@@ -262,6 +262,11 @@ export default function Calendar() {
                   {ev.all_day && (
                     <p className="text-xs text-gray-300 mt-0.5">Heldag</p>
                   )}
+                  {ev.creator?.name && (
+                    <p className="text-[10px] text-gray-300 mt-1">
+                      Tillagd av {ev.creator.name}
+                    </p>
+                  )}
                 </div>
                 <button
                   onClick={() => deleteEvent(ev.id)}
@@ -278,7 +283,7 @@ export default function Calendar() {
       {/* Add Event Modal */}
       {showAddEvent && (
         <div
-          className="fixed inset-0 bg-black/40 flex items-end z-50"
+          className="fixed inset-0 bg-black/40 flex items-end z-[60]"
           onClick={() => setShowAddEvent(false)}
         >
           <div

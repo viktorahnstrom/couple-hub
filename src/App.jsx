@@ -8,6 +8,8 @@ import Shopping from './pages/Shopping'
 import Economy from './pages/Economy'
 import Calendar from './pages/Calendar'
 import More from './pages/More'
+import Titles from './pages/Titles'
+import Recipes from './pages/Recipes'
 import Layout from './components/Layout'
 
 function AppRoutes() {
@@ -49,6 +51,8 @@ function AppRoutes() {
         <Route path="/shopping" element={<Shopping />} />
         <Route path="/economy"  element={<Economy />} />
         <Route path="/more"     element={<More />} />
+        <Route path="/titles"   element={<Titles />} />
+        <Route path="/recipes"  element={<Recipes />} />
         <Route path="*"         element={<Navigate to="/" replace />} />
       </Routes>
     </Layout>

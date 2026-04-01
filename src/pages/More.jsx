@@ -1,3 +1,4 @@
+import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
 import { useHousehold } from '../contexts/HouseholdContext'
 
@@ -5,7 +6,7 @@ const SECTIONS = [
   {
     title: 'Hem & Mat',
     items: [
-      { emoji: '🍳', label: 'Recept & matplanering', soon: true },
+      { emoji: '🍳', label: 'Recept & matplanering', route: '/recipes' },
       { emoji: '🥡', label: 'Skafferi',              soon: true },
       { emoji: '📋', label: 'Veckans matplan',       soon: true },
     ]
@@ -13,7 +14,7 @@ const SECTIONS = [
   {
     title: 'Livsstil',
     items: [
-      { emoji: '🎬', label: 'Film & serie-lista',  soon: true },
+      { emoji: '🎬', label: 'Film & serie-lista',  route: '/titles' },
       { emoji: '📸', label: 'Minnen & foton',      soon: true },
       { emoji: '🗺️', label: 'Hinkelist',           soon: true },
       { emoji: '💝', label: 'Dejt-planerare',      soon: true },
@@ -29,6 +30,7 @@ const SECTIONS = [
 ]
 
 export default function More() {
+  const navigate = useNavigate()
   const { profile, signOut } = useAuth()
   const { household, members } = useHousehold()
 
@@ -91,13 +93,16 @@ export default function More() {
               {section.items.map((item, i) => (
                 <div
                   key={item.label}
+                  onClick={item.route ? () => navigate(item.route) : undefined}
                   className={`flex items-center gap-3 px-4 py-3.5 ${
                     i < section.items.length - 1 ? 'border-b border-gray-50' : ''
-                  }`}
+                  } ${item.route ? 'cursor-pointer active:bg-gray-50' : ''}`}
                 >
                   <span className="text-xl">{item.emoji}</span>
                   <span className="flex-1 text-sm text-gray-700">{item.label}</span>
-                  {item.soon && (
+                  {item.route ? (
+                    <span className="text-gray-300 text-lg">›</span>
+                  ) : (
                     <span className="text-xs bg-gray-100 text-gray-400 px-2 py-0.5 rounded-full font-medium">
                       Snart
                     </span>

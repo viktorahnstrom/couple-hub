@@ -16,6 +16,11 @@ body {
   padding-bottom: env(safe-area-inset-bottom);
 }
 
+/* Main content bottom padding: nav height (80px) + safe area */
+.pb-nav {
+  padding-bottom: calc(5rem + env(safe-area-inset-bottom));
+}
+
 /* Hide scrollbar but keep scroll */
 .scrollbar-hide::-webkit-scrollbar { display: none; }
 .scrollbar-hide {

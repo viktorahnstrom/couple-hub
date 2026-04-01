@@ -5,21 +5,23 @@ import { supabase } from '../lib/supabase'
 import { useHousehold } from '../contexts/HouseholdContext'
 import { useAuth } from '../contexts/AuthContext'
 
-const TABS = ['Kategorier', 'Utgifter', 'Mål']
+const TABS = ['Kategorier', 'Utgifter', 'Mål', 'Inkomst']
 
 export default function Economy() {
-  const { household } = useHousehold()
+  const { household, members } = useHousehold()
   const { user } = useAuth()
   const [tab, setTab] = useState(0)
   const [categories, setCategories] = useState([])
   const [expenses, setExpenses] = useState([])
   const [goals, setGoals] = useState([])
+  const [incomes, setIncomes] = useState([])
   const [loading, setLoading] = useState(true)
 
   // Modal visibility
   const [showAddExpense, setShowAddExpense] = useState(false)
   const [showAddCategory, setShowAddCategory] = useState(false)
   const [showAddGoal, setShowAddGoal] = useState(false)
+  const [showAddIncome, setShowAddIncome] = useState(false)
 
   // Forms
   const [expenseForm, setExpenseForm] = useState({
@@ -31,6 +33,7 @@ export default function Economy() {
     name: '', target_amount: '', current_amount: '',
     deadline: '', icon: '🎯'
   })
+  const [incomeForm, setIncomeForm] = useState({ amount: '', label: 'Lön' })
 
   const now = new Date()
   const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1)
@@ -45,7 +48,7 @@ export default function Economy() {
 
   async function fetchAll() {
     setLoading(true)
-    const [catRes, expRes, goalRes] = await Promise.all([
+    const [catRes, expRes, goalRes, incRes] = await Promise.all([
       supabase
         .from('budget_categories')
         .select('*')
@@ -62,12 +65,41 @@ export default function Economy() {
         .from('savings_goals')
         .select('*')
         .eq('household_id', household.id)
-        .order('created_at')
+        .order('created_at'),
+      supabase
+        .from('monthly_income')
+        .select('*, profiles(name)')
+        .eq('household_id', household.id)
+        .order('created_at'),
     ])
     setCategories(catRes.data || [])
     setExpenses(expRes.data || [])
     setGoals(goalRes.data || [])
+    setIncomes(incRes.data || [])
     setLoading(false)
+  }
+
+  async function addIncome(e) {
+    e.preventDefault()
+    const amount = parseFloat(incomeForm.amount)
+    if (isNaN(amount) || amount <= 0) return
+    await supabase.from('monthly_income').upsert(
+      {
+        household_id: household.id,
+        user_id: user.id,
+        amount,
+        label: incomeForm.label.trim() || 'Lön',
+      },
+      { onConflict: 'household_id,user_id,label' }
+    )
+    setIncomeForm({ amount: '', label: 'Lön' })
+    setShowAddIncome(false)
+    fetchAll()
+  }
+
+  async function deleteIncome(id) {
+    await supabase.from('monthly_income').delete().eq('id', id)
+    fetchAll()
   }
 
   async function addExpense(e) {
@@ -137,12 +169,21 @@ export default function Economy() {
       <div className="bg-white border-b border-gray-100 px-5 pt-6 pb-0">
         <div className="flex items-center justify-between mb-4">
           <h1 className="text-xl font-semibold text-gray-900 capitalize">{monthName}</h1>
-          <button
-            onClick={() => setShowAddExpense(true)}
-            className="bg-primary-600 text-white rounded-full px-4 py-1.5 text-sm font-medium"
-          >
-            + Utgift
-          </button>
+          {tab === 3 ? (
+            <button
+              onClick={() => setShowAddIncome(true)}
+              className="bg-primary-600 text-white rounded-full px-4 py-1.5 text-sm font-medium"
+            >
+              + Inkomst
+            </button>
+          ) : (
+            <button
+              onClick={() => setShowAddExpense(true)}
+              className="bg-primary-600 text-white rounded-full px-4 py-1.5 text-sm font-medium"
+            >
+              + Utgift
+            </button>
+          )}
         </div>
 
         {/* Summary cards */}
@@ -346,6 +387,108 @@ export default function Economy() {
                 </button>
               </div>
             )}
+            {/* ── INCOME ── */}
+            {tab === 3 && (
+              <div className="space-y-4">
+                {/* Total household income summary */}
+                {incomes.length > 0 && (() => {
+                  const totalIncome = incomes.reduce((s, i) => s + Number(i.amount), 0)
+                  const spendingPct = totalIncome > 0
+                    ? Math.round((totalSpent / totalIncome) * 100)
+                    : null
+                  return (
+                    <div className="bg-primary-50 rounded-2xl p-4 border border-primary-100">
+                      <p className="text-xs text-primary-400 mb-1">Total hushållsinkomst / mån</p>
+                      <p className="text-2xl font-bold text-primary-700">
+                        {Math.round(totalIncome).toLocaleString('sv-SE')} kr
+                      </p>
+                      {spendingPct !== null && (
+                        <p className="text-xs text-primary-500 mt-1">
+                          {spendingPct}% spenderat av inkomst denna månad
+                        </p>
+                      )}
+                    </div>
+                  )
+                })()}
+
+                {/* Per-person income cards */}
+                {members.map(member => {
+                  const memberIncomes = incomes.filter(i => i.user_id === member.user_id)
+                  const total = memberIncomes.reduce((s, i) => s + Number(i.amount), 0)
+                  const isMe = member.user_id === user.id
+
+                  return (
+                    <div key={member.user_id}>
+                      <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2 px-1">
+                        {member.profiles?.name}{isMe ? ' (du)' : ''}
+                      </p>
+                      <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden">
+                        {memberIncomes.length === 0 ? (
+                          <div className="px-4 py-4 text-sm text-gray-400">
+                            Ingen inkomst registrerad
+                          </div>
+                        ) : (
+                          memberIncomes.map((inc, i) => (
+                            <div
+                              key={inc.id}
+                              className={`flex items-center gap-3 px-4 py-3.5 ${
+                                i < memberIncomes.length - 1 ? 'border-b border-gray-50' : ''
+                              }`}
+                            >
+                              <span className="text-xl">💰</span>
+                              <div className="flex-1 min-w-0">
+                                <p className="text-sm font-medium text-gray-900">{inc.label}</p>
+                              </div>
+                              <p className="text-sm font-semibold text-gray-900">
+                                {Math.round(Number(inc.amount)).toLocaleString('sv-SE')} kr
+                              </p>
+                              {isMe && (
+                                <button
+                                  onClick={() => deleteIncome(inc.id)}
+                                  className="text-gray-200 hover:text-red-400 transition text-lg leading-none ml-1"
+                                >
+                                  ×
+                                </button>
+                              )}
+                            </div>
+                          ))
+                        )}
+                        {memberIncomes.length > 1 && (
+                          <div className="flex items-center justify-between px-4 py-2.5 bg-gray-50 border-t border-gray-100">
+                            <p className="text-xs text-gray-400">Totalt</p>
+                            <p className="text-sm font-semibold text-gray-700">
+                              {Math.round(total).toLocaleString('sv-SE')} kr
+                            </p>
+                          </div>
+                        )}
+                        {isMe && (
+                          <button
+                            onClick={() => setShowAddIncome(true)}
+                            className="w-full text-left px-4 py-3 text-xs text-primary-600 font-medium border-t border-gray-50 hover:bg-primary-50 transition"
+                          >
+                            + Lägg till inkomst
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  )
+                })}
+
+                {incomes.length === 0 && (
+                  <div className="text-center py-12">
+                    <p className="text-4xl mb-3">💸</p>
+                    <p className="text-gray-400 text-sm mb-1">Ingen inkomst registrerad ännu</p>
+                    <p className="text-gray-300 text-xs mb-4">Lägg till din månadslön för att se hur mycket ni spenderar</p>
+                    <button
+                      onClick={() => setShowAddIncome(true)}
+                      className="text-primary-600 text-sm font-medium"
+                    >
+                      + Lägg till inkomst
+                    </button>
+                  </div>
+                )}
+              </div>
+            )}
           </>
         )}
       </div>
@@ -426,6 +569,29 @@ export default function Economy() {
         </form>
       </Modal>
 
+      <Modal show={showAddIncome} onClose={() => setShowAddIncome(false)} title="Lägg till inkomst">
+        <form onSubmit={addIncome} className="space-y-3">
+          <input
+            type="text"
+            placeholder="Typ av inkomst (t.ex. Lön, Frilans)"
+            value={incomeForm.label}
+            onChange={e => setIncomeForm(p => ({ ...p, label: e.target.value }))}
+            className="input"
+          />
+          <input
+            type="number"
+            placeholder="Belopp per månad (kr)"
+            required
+            min="0"
+            step="100"
+            value={incomeForm.amount}
+            onChange={e => setIncomeForm(p => ({ ...p, amount: e.target.value }))}
+            className="input"
+          />
+          <button type="submit" className="btn-primary">Spara inkomst</button>
+        </form>
+      </Modal>
+
       <Modal show={showAddGoal} onClose={() => setShowAddGoal(false)} title="Nytt sparmål">
         <form onSubmit={addGoal} className="space-y-3">
           <div className="flex gap-2">
@@ -481,7 +647,7 @@ export default function Economy() {
 function Modal({ show, onClose, title, children }) {
   if (!show) return null
   return (
-    <div className="fixed inset-0 bg-black/40 flex items-end z-50" onClick={onClose}>
+    <div className="fixed inset-0 bg-black/40 flex items-end z-[60]" onClick={onClose}>
       <div
         className="bg-white w-full max-w-md mx-auto rounded-t-2xl p-6"
         onClick={e => e.stopPropagation()}
